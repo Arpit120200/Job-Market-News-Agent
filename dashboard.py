@@ -7,7 +7,8 @@ load_dotenv()
 
 app = Flask(__name__)
 
-REPORTS_FOLDER = "reports"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+REPORTS_FOLDER = os.path.join(BASE_DIR, "reports")
 
 
 def read_report_file(filepath):
