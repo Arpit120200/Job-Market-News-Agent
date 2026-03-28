@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Market Agent</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+
+        <div class="header">
+            <div>
+                <div class="header-tag">AI Powered</div>
+                <h1>Job Market Agent</h1>
+                <p class="subtitle">Daily intelligence on hiring trends, layoffs and job market activity</p>
+            </div>
+            <div class="header-actions">
+                <input
+                    type="email"
+                    id="recipient-email"
+                    placeholder="Email for report delivery (optional)"
+                    class="email-input">
+                <button id="run-btn" onclick="runAgent()">Run Agent Now</button>
+            </div>
+        </div>
+
+        <div id="status-bar" class="status-bar hidden"></div>
+
+        <div class="layout">
+
+            <div class="sidebar">
+                <h3>Report History</h3>
+                {% if reports %}
+                    {% for report in reports %}
+                    <div class="report-item {% if loop.first %}active{% endif %}"
+                         onclick="loadReport('{{ report.date_str }}', this)">
+                        <span class="report-date">{{ report.date }}</span>
+                        <a href="/download/{{ report.date_str }}"
+                           class="download-link"
+                           onclick="event.stopPropagation()">PDF</a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="empty-state">No reports yet. Enter your email and click Run Agent Now.</p>
+                {% endif %}
+            </div>
+
+            <div class="main-content">
+                {% if content %}
+                    <div class="report-header">
+                        <h2 id="report-date">{{ date }}</h2>
+                        {% if reports %}
+                        <a href="/download/{{ reports[0].date_str }}" class="download-btn">
+                            Download PDF
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div id="report-content" class="report-content">{{ content }}</div>
+                {% else %}
+                    <div class="no-report">
+                        <p>No reports generated yet.</p>
+                        <p>Enter your email above and click <strong>Run Agent Now</strong>.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        async function runAgent() {
+            const btn = document.getElementById("run-btn");
+            const statusBar = document.getElementById("status-bar");
+            const email = document.getElementById("recipient-email").value.trim();
+
+            // Basic email format check — only validate if email was provided
+            if (email && (!email.includes("@") || !email.includes("."))) {
+                statusBar.className = "status-bar error";
+                statusBar.textContent = "Please enter a valid email address or leave it blank.";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "Running...";
+            statusBar.className = "status-bar info";
+            statusBar.textContent = "Agent is running — scraping sources, generating AI summary and sending email. This takes about 30 seconds...";
+
+            try {
+                const response = await fetch("/run-agent", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ recipient_email: email })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    statusBar.className = "status-bar error";
+                    statusBar.textContent = "Error: " + data.error;
+                } else {
+                    statusBar.className = "status-bar success";
+                    statusBar.textContent = email
+                        ? `Report generated and sent to ${email}.`
+                        : "Report generated successfully.";
+                    }
+
+            } catch (error) {
+                statusBar.className = "status-bar error";
+                statusBar.textContent = "Connection error. Is your server running?";
+            }
+
+            btn.disabled = false;
+            btn.textContent = "Run Agent Now";
+        }
+
+        async function loadReport(dateStr, element) {
+            document.querySelectorAll(".report-item").forEach(el => {
+                el.classList.remove("active");
+            });
+            element.classList.add("active");
+
+            try {
+                const response = await fetch(`/report/${dateStr}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    alert("Could not load report");
+                    return;
+                }
+
+                document.getElementById("report-date").textContent = data.date;
+                document.getElementById("report-content").textContent = data.content;
+
+            } catch (error) {
+                alert("Connection error");
+            }
+        }
+    </script>
+</body>
+</html>
