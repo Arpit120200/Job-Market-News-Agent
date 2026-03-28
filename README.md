@@ -100,4 +100,3 @@ five modules:
 * User authentication for multi-user support
 * Keyword filtering to focus reports on specific industries
 * Historical trend charts showing hiring activity over time
-```
